@@ -1,6 +1,7 @@
 \documentclass[12pt]{article}
 \usepackage{amsmath}
 \usepackage{hyperref}
+\usepackage{tikz} % for ARS drawings
 
 \title{CPSC 354 Report}
 \author{Jonathan Karam }
@@ -52,4 +53,64 @@ The lesson is that even with very simple rules, there can be hidden limits on wh
 \section{Conclusion}
 The MU puzzle shows that rules can look simple, but still create pretty deep limits.
 This makes it a good example on how formal systems work.
+
+\newpage
+\section{Homework 2 Rewriting ARS Pictures}
+
+Below you will see the directed graphs for the seven ARS's. Nodes are the elements of A and arrows are the pairs in R.
+
+\subsection{1: $A=\{\}$}
+\begin{tikzpicture}
+  %empty
+\end{tikzpicture}
+
+\subsection{2: $A=\{a\},\ R=\{\}$}
+\begin{tikzpicture}
+  \node[circle,draw] (a) at (0,0) {$a$};
+\end{tikzpicture}
+
+\subsection{3: $A=\{a\},\ R=\{(a,a)\}$}
+\begin{tikzpicture}
+  \node[circle,draw] (a) at (0,0) {$a$};
+  \draw[->] (a) edge[loop above] (a);
+\end{tikzpicture}
+
+\subsection{4: $A=\{a,b,c\},\ R=\{(a,b),(a,c)\}$}
+\begin{tikzpicture}
+  \node[circle,draw] (a) at (0,0) {$a$};
+  \node[circle,draw] (b) at (2.2,0) {$b$};
+  \node[circle,draw] (c) at (2.2,-1.2) {$c$};
+  \draw[->] (a) -- (b);
+  \draw[->] (a) -- (c);
+\end{tikzpicture}
+
+\subsection{5: $A=\{a,b\},\ R=\{(a,a),(a,b)\}$}
+\begin{tikzpicture}
+  \node[circle,draw] (a) at (0,0) {$a$};
+  \node[circle,draw] (b) at (2.2,0) {$b$};
+  \draw[->] (a) edge[loop above] (a);
+  \draw[->] (a) -- (b);
+\end{tikzpicture}
+
+\subsection{6: $A=\{a,b,c\},\ R=\{(a,b),(b,b),(a,c)\}$}
+\begin{tikzpicture}
+  \node[circle,draw] (a) at (0,0) {$a$};
+  \node[circle,draw] (b) at (2.2,0) {$b$};
+  \node[circle,draw] (c) at (2.2,-1.2) {$c$};
+  \draw[->] (a) -- (b);
+  \draw[->] (a) -- (c);
+  \draw[->] (b) edge[loop above] (b);
+\end{tikzpicture}
+
+\subsection{7: $A=\{a,b,c\},\ R=\{(a,b),(b,b),(a,c),(c,c)\}$}
+\begin{tikzpicture}
+  \node[circle,draw] (a) at (0,0) {$a$};
+  \node[circle,draw] (b) at (2.2,0) {$b$};
+  \node[circle,draw] (c) at (2.2,-1.2) {$c$};
+  \draw[->] (a) -- (b);
+  \draw[->] (a) -- (c);
+  \draw[->] (b) edge[loop above] (b);
+  \draw[->] (c) edge[loop right] (c);
+\end{tikzpicture}
+
 \end{document}
