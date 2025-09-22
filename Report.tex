@@ -120,15 +120,14 @@ Every rule preserves $h$, so $h(\texttt{MI})=1$ and $h(\texttt{MU})=0$. Contradi
 \section{Week 2: Abstract Rewriting Systems}
 
 \subsection{Notes and Discussion}
-This week focused on abstract rewriting systems . 
+This week focused on abstract rewriting systems. 
 An ARS consists of a set $A$ and a relation $R$. 
-We care about whether rewriting always stops, whether different rewrite paths can rejoin, and whether normal forms are unique. 
-These ideas are important in programming languages, compilers, and theorem provers.
+We ask whether rewriting always stops (termination), whether different rewrite paths can rejoin (confluence), and whether elements end up in unique normal forms.
 
 \subsection{Homework}
-We drew diagrams and classified ARSs.
+\emph{Same problem statement as before:} draw each ARS and decide termination, confluence, and whether the system has \emph{unique normal forms for all elements} (UN-for-all).
 
-\subsubsection*{Examples}
+\subsubsection*{Examples (drawings unchanged)}
 \begin{tikzpicture}
   % Example 1
 \end{tikzpicture}
@@ -190,19 +189,28 @@ We drew diagrams and classified ARSs.
 
 \textbf{7: $A=\{a,b,c\}, R=\{(a,b),(b,b),(a,c),(c,c)\}$}
 
-\subsubsection*{Classification Table}
+\subsubsection*{Classification (solutions rewritten)}
+We now use \textbf{UN-for-all}: every element must have a (unique) normal form.
+
 \[
 \begin{array}{c|c|c|c|l}
-ARS & Terminating & Confluent & UN & Reason \\\hline
-1 & Yes & Yes & Yes & Empty system \\
-2 & Yes & Yes & Yes & a is normal \\
-3 & No  & Yes & Yes & a \to a loop \\
-4 & Yes & No  & No  & a \to b or c, two normals \\
-5 & No  & Yes & Yes & all join at b \\
-6 & No  & No  & Yes & a \to b (loop) or c (nf) \\
-7 & No  & No  & Yes & no nfs, vacuous UN \\
+\text{ARS} & \text{Terminating} & \text{Confluent} & \text{UN-for-all} & \text{Why} \\\hline
+1 & \text{Yes} & \text{Yes} & \text{Yes} & \text{Nothing rewrites (vacuous).} \\
+2 & \text{Yes} & \text{Yes} & \text{Yes} & a \text{ is already normal and unique.} \\
+3 & \text{No} & \text{Yes} & \text{No}  & a \to a \text{ forever; } a \text{ has no NF.} \\
+4 & \text{Yes} & \text{No}  & \text{No}  & a\to b,\,a\to c \text{ (two distinct NFs).} \\
+5 & \text{No} & \text{Yes} & \text{Yes} & a\to b,\; b \text{ normal; both end at } b. \\
+6 & \text{No} & \text{No}  & \text{No}  & b \text{ loops; } a\to c \text{ NF, not joinable with } b. \\
+7 & \text{No} & \text{No}  & \text{No}  & b,c \text{ loop; no element has an NF.} \\
 \end{array}
 \]
+
+\paragraph{Remarks.}
+\begin{itemize}
+  \item Non-termination alone does not rule out UN-for-all (see 5), but any element without an NF breaks it (3,6,7).
+  \item In terminating ARSs, confluence $\Rightarrow$ UN-for-all (every element reaches a unique NF).
+  \item Item 4 is the canonical “diamond failure”: two different normal forms reachable from the same source.
+\end{itemize}
 
 \section{Week 3: Strings over \{a,b\}}
 
@@ -236,10 +244,116 @@ Equivalence: all $b$ vanish, runs of $a$ collapse to one $a$.
 Classes: $\{\varepsilon,a\}$.  
 Fix: orient swaps, keep $aa \to a$ and $b \to \varepsilon$.  
 
+\section{Week 4: Measure Functions and Termination}
+
+\subsection{Notes and Discussion}
+This week we looked at \emph{measure functions} to prove that algorithms terminate.
+A measure maps the state of a computation to a value in a well-founded set (usually the natural numbers) and must
+\emph{strictly decrease} with every loop iteration or recursive call. Because there are no infinite descending chains in a well-founded set, the computation must eventually stop.
+
+\textbf{Scope note:} For the homework we include only what is required: define a measure and show it strictly decreases (hence termination).
+
+\paragraph{Class notes — invariant proof that Euclid returns $\gcd$.}
+\begin{itemize}
+  \item \textbf{Key fact.} $\gcd(a,b)=\gcd\!\big(b,\,a-qb\big)$ for any integer $q$.
+  \item \textbf{Update.} Writing $a=qb+r$ with $r=a\bmod b$, the step $(a,b)\mapsto(b,r)$ keeps the gcd unchanged.
+  \item \textbf{Invariant.} Before each loop test: $\gcd(a,b)=\gcd(a_0,b_0)$.
+  \item \textbf{End.} When $b=0$, $\gcd(a_0,b_0)=\gcd(a,0)=|a|$, the returned value.
+\end{itemize}
+
+\subsection{Homework 4}
+
+\subsubsection*{HW 4.1}
+\textbf{Problem.} Consider:
+\begin{lstlisting}[language=Python]
+while b != 0:
+    temp = b
+    b = a % b
+    a = temp
+return a
+\end{lstlisting}
+Under which conditions does this algorithm always terminate? Find a measure function and prove termination.
+
+\medskip
+\textbf{Answer.}  
+This is the classical Euclidean algorithm for $\gcd(a,b)$. It always terminates provided
+\[
+a,b \in \mathbb{Z}\quad\text{and}\quad b \ge 0,
+\]
+and we interpret \texttt{\%} as the mathematical remainder with $0 \le a \bmod b < b$ for $b>0$. (If inputs may be negative, replace them once by $|a|,|b|$; this preserves $\gcd$ and satisfies the condition.)
+
+\paragraph{Measure function.}
+Let the program state be the pair $(a,b)$ with $b \ge 0$. Define
+\[
+\mu(a,b) \;=\; b \in \mathbb{N}.
+\]
+
+\paragraph{Strict decrease.}
+In an iteration with $b>0$ we set $b' = a \bmod b$. By definition of remainder,
+\[
+0 \le b' < b.
+\]
+Therefore $\mu(a',b') = b' < b = \mu(a,b)$. Hence $\mu$ strictly decreases on every loop step.
+
+\paragraph{Well-foundedness and termination.}
+$\mu$ maps states to the natural numbers with the usual $<$, which is well-founded (no infinite descending chains). Because $\mu$ strictly decreases whenever the loop body executes, the loop can execute only finitely many times; eventually $b=0$ and the algorithm returns. \qed
+
+\begin{remark}
+The algorithm not only terminates; it returns $\gcd(a,b)$. This follows from the class-note invariant above and $\gcd(a,0)=|a|$.
+\end{remark}
+
+\subsubsection*{HW 4.2}
+\textbf{Problem.} Consider the fragment of merge sort:
+\begin{lstlisting}[language=Python]
+def merge_sort(arr, left, right):
+    if left >= right:
+        return
+    mid = (left + right) // 2
+    merge_sort(arr, left, mid)
+    merge_sort(arr, mid + 1, right)
+    merge(arr, left, mid, right)
+\end{lstlisting}
+Prove that
+\[
+\varphi(left,right) \;=\; right - left + 1
+\]
+is a measure function for \texttt{merge\_sort}.
+
+\medskip
+\textbf{Answer.}
+We show that every recursive call is made with a \emph{strictly smaller} measure and that the measure is bounded below by $0$.
+
+\paragraph{Well-founded codomain.}
+$\varphi(left,right)$ is a nonnegative integer whenever $left\le right$, so the codomain is $\mathbb{N}$ with the usual $<$ (well-founded).
+
+\paragraph{Base case.}
+If $left \ge right$, the function returns immediately. In this case $\varphi \le 1$, and there are no recursive calls.
+
+\paragraph{Decrease for recursive calls.}
+Assume $left < right$ and let $n = \varphi(left,right) = right-left+1 \ge 2$. With
+\[
+mid = \left\lfloor \frac{left+right}{2} \right\rfloor,
+\]
+the first recursive call is on $[left,\,mid]$ and the second on $[mid+1,\,right]$. Their measures are
+\[
+\varphi(left,mid) = mid - left + 1, \qquad
+\varphi(mid+1,right) = right - mid.
+\]
+Because $left \le mid < right$, we have
+\[
+1 \le \varphi(left,mid) \le \left\lceil \frac{n}{2}\right\rceil < n,\qquad
+1 \le \varphi(mid+1,right) \le \left\lfloor \frac{n}{2}\right\rfloor < n.
+\]
+Thus each recursive call receives strictly smaller measure than $n$.
+
+\paragraph{Conclusion.}
+Every chain of recursive calls strictly decreases $\varphi$ and cannot be infinite in $\mathbb{N}$. Therefore \texttt{merge\_sort} terminates. \qed
+
 \section{Conclusion}
 \textbf{Week 1:} Learned about invariants and why MU is impossible.  
-\textbf{Week 2:} Saw ARS diagrams and how to classify systems.  
-\textbf{Week 3:} Explored rewriting with $\{a,b\}$, equivalence classes, and how termination can be fixed.
+\textbf{Week 2:} Revisited ARS pictures and re-answered termination/confluence/UN with the UN-for-all convention.  
+\textbf{Week 3:} Explored rewriting with $\{a,b\}$, equivalence classes, and how termination can be fixed.\\
+\textbf{Week 4:} Used measure functions to prove termination of Euclid's algorithm and merge sort.
 
 \begin{thebibliography}{99}
 \bibitem[BLA]{bla} Author, \href{https://en.wikipedia.org/wiki/LaTeX}{LaTeX Overview}, Publisher, Year.
