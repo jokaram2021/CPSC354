@@ -74,6 +74,8 @@ This report is a collection of notes, discussions, and homework solutions for CP
 Homework 1 discusses the MIU puzzle and proves why \texttt{MI} cannot become \texttt{MU}. 
 Homework 2 introduces abstract rewriting systems (ARS), includes TikZ diagrams, and classifies systems by termination, confluence, and unique normal forms. 
 Homework 3 studies a rewriting system over $\{a,b\}$ and explores its equivalence classes and termination.
+Homework 4 proves termination of two classic algorithms using measure functions.
+Homework 5 evaluates a small $\lambda$-calculus ``workout'' using $\alpha$- and $\beta$-rules, with notes connecting these ideas to modern languages.
 \end{abstract}
 
 \tableofcontents
@@ -349,11 +351,68 @@ Thus each recursive call receives strictly smaller measure than $n$.
 \paragraph{Conclusion.}
 Every chain of recursive calls strictly decreases $\varphi$ and cannot be infinite in $\mathbb{N}$. Therefore \texttt{merge\_sort} terminates. \qed
 
+\section{Week 5: Lambda Calculus Foundations}
+
+\subsection{Notes and Discussion}
+\begin{itemize}
+  \item \textbf{Self-application and computation.} Terms like $(\lambda x.\,xx)(\lambda x.\,xx)$ show that functions can take \emph{code as data}. This enables iteration/recursion encodings (fixed points) and explains why untyped $\lambda$ can express non-termination.
+  \item \textbf{Where $\lambda$ shines.} Useful for building \emph{minimal cores}: interpreters, proof assistants, type checkers, compiler IRs, and reasoning about higher-order functions. It models substitution, scope, closures, and evaluation precisely.
+  \item \textbf{Composition and numerals.} Church numerals encode iteration: $\mathbf{n}\,f\,x = f^{n}x$. Function composition $(f \circ g)$ corresponds to multiplying numerals: $(\mathbf{m}\circ\mathbf{n})\,f\,x = f^{mn}x$. Plain application behaves like \emph{exponentiation in reverse order}: $\mathbf{m}\,\mathbf{n} = \mathbf{n}^{\,\mathbf{m}}$ (apply $\mathbf{m}$ times), so $\mathbf{2}\,\mathbf{3}=\mathbf{9}$ and $\mathbf{3}\,\mathbf{2}=\mathbf{8}$.
+  \item \textbf{Confluence (Church–Rosser).} If a term reduces to two results, there exists a common reduct. Meaning: evaluation order doesn’t affect the final normal form (when it exists). Languages borrow this idea to justify equational reasoning and optimizations.
+  \item \textbf{From $\lambda$ to languages.} Add types (safety), effects (state, I/O), data types, and evaluation strategy to get modern languages. Typed $\lambda$-calculi (System~F, Hindley–Milner) underlie ML/Haskell; effect systems/monads model side effects.
+  \item \textbf{Haskell links.} Purity, first-class functions, laziness (normal-order–like), algebraic data types, and type inference all line up with typed $\lambda$-calculus. Monads/Applicatives are structured ways to compose computations.
+  \item \textbf{Names and $\alpha$-conversion.} Variables need not be single letters; names are irrelevant up to $\alpha$-equivalence (consistent renaming). Modern languages reflect this via lexical scope, hygienic macros, and compiler renaming to avoid capture.
+  \item \textbf{The role of $\alpha$ in practice.} Compilers implement renaming and fresh-name generation to maintain scope hygiene (e.g., SSA form, macro expansion).
+  \item \textbf{Termination and type systems.} Untyped $\lambda$ allows non-termination (Y-combinator). Total languages (Coq/Agda) \emph{forbid} general recursion by checking termination via structural/lexicographic and multivariate measures; complex patterns (exponential, multi-dimension decrease) are handled with well-founded orders and sized types. Downsides: proofs/measures can cost compile time (sometimes exponential).
+  \item \textbf{Original intent.} Church invented $\lambda$ for the foundations of mathematics (functions as rules of calculation) and to study effective computability—leading to Church–Turing thesis.
+  \item \textbf{Recursion vs loops.} Prefer recursion when structure is naturally recursive (trees, syntax, divide-and-conquer) or when immutability/purity matters. Prefer loops when iterating in-place over arrays or when tail recursion isn’t optimized.
+  \item \textbf{What can/can’t be expressed.} Untyped $\lambda$ can encode any computable function (Turing complete). Exact analysis over reals (symbolic integrals) can be encoded with representations, but decidability and performance are not guaranteed; many problems are undecidable.
+  \item \textbf{Meaning vs representation.} $\alpha$-equivalence shows semantics can be invariant under renaming. Suggests programs’ meaning depends on structure and binding, not surface spelling.
+  \item \textbf{Infinitely long calls?} Reductions can be infinite (non-terminating), but any single step is finite. Typed total calculi restrict to well-founded recursion to rule these out.
+\end{itemize}
+
+\subsection{Homework 5: Lambda Calculus Workout}
+
+\subsubsection*{Problem}
+Evaluate (practice $\alpha$ and $\beta$ rules; match parentheses):
+\[
+\Big(\lambda f.\,\lambda x.\,f(f\,x)\Big)\;
+\Big(\lambda f.\,\lambda x.\,f(f(f\,x))\Big).
+\]
+
+\subsubsection*{Solution}
+Let
+\[
+\mathbf{two} \equiv \lambda f.\lambda x.\,f(fx),\qquad
+\mathbf{three} \equiv \lambda f.\lambda x.\,f(f(fx)).
+\]
+Then
+\[
+\mathbf{two}\;\mathbf{three}
+\;\xrightarrow{\beta}\;
+\lambda x.\,\mathbf{three}\,(\mathbf{three}\,x).
+\]
+Compute:
+\[
+\mathbf{three}\,x \xrightarrow{\beta} \lambda y.\,x(x(x\,y)),
+\qquad
+\mathbf{three}\,(\lambda y.\,x(x(x\,y))) \xrightarrow{\beta} \lambda z.\,x^{9}z.
+\]
+Therefore
+\[
+\boxed{\lambda x.\lambda z.\,x^{9}z}
+\]
+which is the Church numeral $\mathbf{nine}$.
+
+\paragraph{Swap note.}
+$\mathbf{3}\,\mathbf{2}=\mathbf{8}$, not $\mathbf{9}$, because application acts like exponentiation with reversed order: $\mathbf{m}\,\mathbf{n}=\mathbf{n}^{\,\mathbf{m}}$.
+
 \section{Conclusion}
 \textbf{Week 1:} Learned about invariants and why MU is impossible.  
 \textbf{Week 2:} Revisited ARS pictures and re-answered termination/confluence/UN with the UN-for-all convention.  
 \textbf{Week 3:} Explored rewriting with $\{a,b\}$, equivalence classes, and how termination can be fixed.\\
-\textbf{Week 4:} Used measure functions to prove termination of Euclid's algorithm and merge sort.
+\textbf{Week 4:} Used measure functions to prove termination of Euclid's algorithm and merge sort.\\
+\textbf{Week 5:} Connected $\lambda$-calculus ideas (self-application, confluence, Church numerals) to modern language design and evaluated the workout.
 
 \begin{thebibliography}{99}
 \bibitem[BLA]{bla} Author, \href{https://en.wikipedia.org/wiki/LaTeX}{LaTeX Overview}, Publisher, Year.
