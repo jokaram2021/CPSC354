@@ -545,6 +545,149 @@ In total/strongly normalizing typed calculi, $Y$ cannot be defined without sacri
 \textbf{Week 4:} Used measure functions to prove termination of Euclid's algorithm and merge sort.\\
 \textbf{Week 5:} Connected $\lambda$-calculus ideas (self-application, confluence, Church numerals) to modern language design and evaluated the workout.\\
 \textbf{Week 6:} Explained evaluation contexts and fixpoints, computed \texttt{fact 3} step-by-step with labeled rules, and encoded factorial via the Y-combinator.
+% ============================
+\section{Week 7: Grammars, Parse Trees, and ASTs}
+% ============================
+
+\subsection{Class Notes \& Discussion}
+
+\begin{itemize}
+  \item \textbf{Fixed-point combinators and performance.} Using $Y$/\texttt{fix} introduces an extra unfolding step ($YF \to F(YF)$). Named recursion or \texttt{let rec} generally performs better since the compiler can optimize it directly without creating closures on each call.
+  \item \textbf{LLMs as metaprograms.} Large language models can be viewed as metaprograms that translate semantics (intent or meaning) into code. However, they do not replace the traditional compiler pipeline—semantic interpretation, parsing, optimization, and execution still occur afterward.
+  \item \textbf{Lisp and syntax readability.} Lisp’s simple S-expression syntax gives programmers direct access to abstract syntax, making metaprogramming and macro systems easier to implement. The trade-off is reduced human readability but increased ease of parsing for machines.
+  \item \textbf{Ambiguous grammars.} Ambiguity in grammars can make parsing inconsistent. Some languages resolve this through operator precedence and associativity rules. Others use ambiguity intentionally to allow flexible interpretation, though this is rare and risky in language design.
+  \item \textbf{Lambda calculus and grammars.} Lambda calculus defines the semantics of computation, while grammars define syntax. Parse trees represent structure that can later be reduced or evaluated according to lambda calculus rules.
+  \item \textbf{Parse trees vs.\ ASTs.} Parse trees (CSTs) include every symbol from the grammar, while ASTs simplify structure by removing redundant nodes like parentheses or punctuation. ASTs capture the program’s logical structure, making them easier for compilers to analyze.
+  \item \textbf{ASTs and compilation to assembly.} Parse trees and ASTs form the foundation for converting source code into lower-level representations. Compilers traverse ASTs to generate intermediate code (IR), perform optimizations, and finally emit assembly instructions or machine code.
+\end{itemize}
+
+\subsection{Homework 7: Context-Free Grammar and Derivation Trees}
+
+Grammar:
+\[
+\begin{array}{rcl}
+\text{Exp} &\to& \text{Exp}\;+\;\text{Exp1}\ \mid\ \text{Exp1}\\
+\text{Exp1} &\to& \text{Exp1}\;*\;\text{Exp2}\ \mid\ \text{Exp2}\\
+\text{Exp2} &\to& \text{Integer}\ \mid\ (\,\text{Exp}\,)
+\end{array}
+\]
+
+\paragraph{(a) \texttt{2+1}}
+\begin{center}
+\begin{tikzpicture}[grow=down,level distance=10mm, every node/.style={font=\small}]
+\node{Exp}
+ child{ node{Exp}
+   child{ node{Exp1}
+     child{ node{Exp2}
+       child{ node{Integer} child{ node{$2$} } }}}}
+ child{ node{$+$} }
+ child{ node{Exp1}
+   child{ node{Exp2}
+     child{ node{Integer} child{ node{$1$} } }}};
+\end{tikzpicture}
+\end{center}
+
+\paragraph{(b) \texttt{1+2*3}}
+\begin{center}
+\begin{tikzpicture}[grow=down,level distance=10mm, every node/.style={font=\small}]
+\node{Exp}
+ child{ node{Exp}
+   child{ node{Exp1}
+     child{ node{Exp2}
+       child{ node{Integer} child{ node{$1$} } }}}}
+ child{ node{$+$} }
+ child{ node{Exp1}
+   child{ node{Exp1}
+     child{ node{Exp2}
+       child{ node{Integer} child{ node{$2$} } }}}
+   child{ node{$*$} }
+   child{ node{Exp2}
+     child{ node{Integer} child{ node{$3$} } }}};
+\end{tikzpicture}
+\end{center}
+
+\paragraph{(c) \texttt{1+(2*3)}}
+\begin{center}
+\begin{tikzpicture}[grow=down,level distance=10mm, every node/.style={font=\small}]
+\node{Exp}
+ child{ node{Exp}
+   child{ node{Exp1}
+     child{ node{Exp2}
+       child{ node{Integer} child{ node{$1$} } }}}}
+ child{ node{$+$} }
+ child{ node{Exp1}
+   child{ node{Exp2}
+     child{ node{$($} }
+     child{ node{Exp}
+       child{ node{Exp1}
+         child{ node{Exp1}
+           child{ node{Exp2}
+             child{ node{Integer} child{ node{$2$} } }}}
+         child{ node{$*$} }
+         child{ node{Exp2}
+           child{ node{Integer} child{ node{$3$} } }}}}
+     child{ node{$)$} }}};
+\end{tikzpicture}
+\end{center}
+
+\paragraph{(d) \texttt{(1+2)*3}}
+\begin{center}
+\begin{tikzpicture}[grow=down,level distance=10mm, every node/.style={font=\small}]
+\node{Exp}
+ child{ node{Exp1}
+   child{ node{Exp1}
+     child{ node{Exp2}
+       child{ node{$($} }
+       child{ node{Exp}
+         child{ node{Exp}
+           child{ node{Exp1}
+             child{ node{Exp2}
+               child{ node{Integer} child{ node{$1$} } }}}}
+         child{ node{$+$} }
+         child{ node{Exp1}
+           child{ node{Exp2}
+             child{ node{Integer} child{ node{$2$} } }}}}
+       child{ node{$)$} }}}
+   child{ node{$*$} }
+   child{ node{Exp2}
+     child{ node{Integer} child{ node{$3$} } }}};
+\end{tikzpicture}
+\end{center}
+
+\paragraph{(e) \texttt{1+2*3+4*5+6}}
+\begin{center}
+\begin{tikzpicture}[grow=down,level distance=10mm, sibling distance=18mm, every node/.style={font=\small}]
+\node{Exp}
+  child{ node{Exp}
+    child{ node{Exp}
+      child{ node{Exp}
+        child{ node{Exp1}
+          child{ node{Exp2}
+            child{ node{Integer} child{ node{$1$} } }}}}
+      child{ node{$+$} }
+      child{ node{Exp1}
+        child{ node{Exp1}
+          child{ node{Exp2}
+            child{ node{Integer} child{ node{$2$} } }}}
+        child{ node{$*$} }
+        child{ node{Exp2}
+          child{ node{Integer} child{ node{$3$} } }}}}
+    child{ node{$+$} }
+    child{ node{Exp1}
+      child{ node{Exp1}
+        child{ node{Exp2}
+          child{ node{Integer} child{ node{$4$} } }}
+        }
+      child{ node{$*$} }
+      child{ node{Exp2}
+        child{ node{Integer} child{ node{$5$} } }}}}
+  child{ node{$+$} }
+  child{ node{Exp1}
+    child{ node{Exp2}
+      child{ node{Integer} child{ node{$6$} } }}};
+\end{tikzpicture}
+\end{center}
+
 
 \begin{thebibliography}{99}
 \bibitem[BLA]{bla} Author, \href{https://en.wikipedia.org/wiki/LaTeX}{LaTeX Overview}, Publisher, Year.
