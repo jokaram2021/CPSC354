@@ -76,7 +76,9 @@ Homework 2 introduces abstract rewriting systems (ARS), includes TikZ diagrams, 
 Homework 3 studies a rewriting system over $\{a,b\}$ and explores its equivalence classes and termination.
 Homework 4 proves termination of two classic algorithms using measure functions.
 Homework 5 evaluates a small $\lambda$-calculus ``workout'' using $\alpha$- and $\beta$-rules, with notes connecting these ideas to modern languages.
-Homework 6 develops fixpoints and recursion: we compute \texttt{fact 3} step-by-step with the rules for \texttt{fix}, \texttt{let}, and \texttt{let rec}, and give a Y-combinator encoding of factorial. We also include a Class Notes \& Discussion section that addresses questions about evaluation contexts, fixpoints, recursion, confluence vs.\ termination, and practical trade-offs.
+Homework 6 develops fixpoints and recursion: we compute \texttt{fact 3} step-by-step with the rules for \texttt{fix}, \texttt{let}, and \texttt{let rec}, and give a Y-combinator encoding of factorial.
+Week 7 covers grammars, parse trees, and ASTs with full derivation trees.
+Week 8 connects the Natural Number Game (Tutorial World) to natural-language proofs and Lean tactics, with scripts for Levels 5--8 and a short class-notes discussion.
 \end{abstract}
 
 \tableofcontents
@@ -212,7 +214,7 @@ We now use \textbf{UN-for-all}: every element must have a (unique) normal form.
 \begin{itemize}
   \item Non-termination alone does not rule out UN-for-all (see 5), but any element without an NF breaks it (3,6,7).
   \item In terminating ARSs, confluence $\Rightarrow$ UN-for-all (every element reaches a unique NF).
-  \item Item 4 is the canonical “diamond failure”: two different normal forms reachable from the same source.
+  \item Item 4 is the canonical ``diamond failure'': two different normal forms reachable from the same source.
 \end{itemize}
 
 \section{Week 3: Strings over \{a,b\}}
@@ -254,7 +256,7 @@ This week we looked at \emph{measure functions} to prove that algorithms termina
 A measure maps the state of a computation to a value in a well-founded set (usually the natural numbers) and must
 \emph{strictly decrease} with every loop iteration or recursive call. Because there are no infinite descending chains in a well-founded set, the computation must eventually stop.
 
-\textbf{Scope note:} Here we define a measure and show it strictly decreases
+\textbf{Scope note:} Here we define a measure and show it strictly decreases.
 
 \paragraph{Class notes invariant proof that Euclid returns $\gcd$.}
 \begin{itemize}
@@ -283,7 +285,7 @@ This is the classical Euclidean algorithm for $\gcd(a,b)$. It always terminates 
 \[
 a,b \in \mathbb{Z}\quad\text{and}\quad b \ge 0,
 \]
-and we interpret \texttt{\%} as the mathematical remainder with $0 \le a \bmod b < b$ for $b>0$. If the inputs are negative, replace them once by $|a|,|b|$; this preserves $\gcd$ and satisfies the condition.)
+and we interpret \texttt{\%} as the mathematical remainder with $0 \le a \bmod b < b$ for $b>0$. If the inputs are negative, replace them once by $|a|,|b|$; this preserves $\gcd$ and satisfies the condition.
 
 \paragraph{Measure function.}
 Let the program state be the pair $(a,b)$ with $b \ge 0$. Define
@@ -299,7 +301,8 @@ In an iteration with $b>0$ we set $b' = a \bmod b$. By definition of remainder,
 Therefore $\mu(a',b') = b' < b = \mu(a,b)$. Hence $\mu$ strictly decreases on every loop step.
 
 \paragraph{Well-foundedness and termination.}
-$\mu$ maps states to the natural numbers with the usual $<$, which is well founded  because $\mu$ strictly decreases whenever the loop body executes, the loop can execute only finitely many times; eventually $b=0$ and the algorithm returns. \qed
+$\mu$ maps states to the natural numbers with the usual $<$, which is well founded.  
+Because $\mu$ strictly decreases whenever the loop body executes, the loop can execute only finitely many times; eventually $b=0$ and the algorithm returns. \qed
 
 \begin{remark}
 The algorithm not only terminates; it returns $\gcd(a,b)$. This follows from the class note invariant above and $\gcd(a,0)=|a|$.
@@ -364,12 +367,9 @@ Every chain of recursive calls strictly decreases $\varphi$ and cannot be infini
   \item \textbf{Haskell links.} Purity, first-class functions, laziness (normal-order–like), algebraic data types, and type inference all line up with typed $\lambda$-calculus. Monads/Applicatives are structured ways to compose computations.
   \item \textbf{Names and $\alpha$-conversion.} Variables need not be single letters; names are irrelevant up to $\alpha$-equivalence (consistent renaming). Modern languages reflect this via lexical scope, hygienic macros, and compiler renaming to avoid capture.
   \item \textbf{The role of $\alpha$ in practice.} Compilers implement renaming and fresh-name generation to maintain scope hygiene (e.g., SSA form, macro expansion).
-  \item \textbf{Termination and type systems.} Untyped $\lambda$ allows non-termination (Y-combinator). Total languages (Coq/Agda) \emph{forbid} general recursion by checking termination via structural/lexicographic and multivariate measures; complex patterns (exponential, multi-dimension decrease) are handled with well-founded orders and sized types. Downsides: proofs/measures can cost compile time (sometimes exponential).
-  \item \textbf{Original intent.} Church invented $\lambda$ for the foundations of mathematics (functions as rules of calculation) and to study effective computability—leading to Church–Turing thesis.
-  \item \textbf{Recursion vs loops.} Prefer recursion when structure is naturally recursive (trees, syntax, divide-and-conquer) or when immutability/purity matters. Prefer loops when iterating in-place over arrays or when tail recursion isn’t optimized.
-  \item \textbf{What can/can’t be expressed.} Untyped $\lambda$ can encode any computable function (Turing complete). Exact analysis over reals (symbolic integrals) can be encoded with representations, but decidability and performance are not guaranteed; many problems are undecidable.
-  \item \textbf{Meaning vs representation.} $\alpha$-equivalence shows semantics can be invariant under renaming. Suggests programs’ meaning depends on structure and binding, not surface spelling.
-  \item \textbf{Infinitely long calls?} Reductions can be infinite (non-terminating), but any single step is finite. Typed total calculi restrict to well-founded recursion to rule these out.
+  \item \textbf{Termination and type systems.} Untyped $\lambda$ allows non-termination (Y-combinator). Total languages (Coq/Agda) \emph{forbid} general recursion by checking termination via structural/lexicographic and multivariate measures; complex patterns (exponential, multi-dimension decrease) are handled with well-founded orders and sized types.
+  \item \textbf{Original intent.} Church invented $\lambda$ for the foundations of mathematics and to study effective computability—leading to Church–Turing thesis.
+  \item \textbf{Recursion vs loops.} Prefer recursion for recursive structure or immutability; prefer loops for in-place iteration or where tail recursion isn’t optimized.
 \end{itemize}
 
 \subsection{Homework 5: Lambda Calculus Workout}
@@ -404,9 +404,7 @@ Therefore
 \boxed{\lambda x.\lambda z.\,x^{9}z}
 \]
 which is the Church numeral $\mathbf{nine}$.
-
-\paragraph{Swap note.}
-$\mathbf{3}\,\mathbf{2}=\mathbf{8}$, not $\mathbf{9}$, because application acts like exponentiation with reversed order: $\mathbf{m}\,\mathbf{n}=\mathbf{n}^{\,\mathbf{m}}$.
+(And $\mathbf{3}\,\mathbf{2}=\mathbf{8}$ because $\mathbf{m}\,\mathbf{n}=\mathbf{n}^{\,\mathbf{m}}$.)
 
 % ============================
 \section{Week 6: Fixpoints and Recursion}
@@ -423,7 +421,7 @@ This section responds concisely to discussion questions from class.
   \mathrm{let}\ x=e_1\ \mathrm{in}\ e_2 \;\to\; (\lambda x.\,e_2)\,e_1,\qquad
   \mathrm{if}\ \text{true}\ \text{then}\ e_1\ \text{else}\ e_2 \to e_1.
   \]
-  Contexts ensure we can justify each inner step when \texttt{fix}, \texttt{let}, or \texttt{if} occurs inside a bigger term.
+  Contexts justify each inner step when \texttt{fix}, \texttt{let}, or \texttt{if} appears inside a bigger term.
 
   \item \textbf{Fixpoint combinator and recursion.}
   A combinator $Y$ with $YF = F(YF)$ provides a value $YF$ that is a fixed point of $F$. If $F$ encodes one step of a recursive definition, $YF$ is its recursive solution. Languages often bake this in as a primitive \texttt{fix}.
@@ -433,32 +431,7 @@ This section responds concisely to discussion questions from class.
   \mathrm{fact} \;\equiv\; Y\,(\lambda f.\,\lambda n.\ \mathrm{if}\ n=0\ \mathrm{then}\ 1\ \mathrm{else}\ n \cdot f(n-1)).
   \]
 
-  \item \textbf{Trade-offs of using $Y$ in practice.}
-  $Y$ relies on non-termination to exist; in typed, strongly normalizing calculi, it breaks termination. In practical languages, explicit \texttt{rec}/\texttt{let rec} or named functions yield clearer code, better typing, and easier optimization/debugging.
-
-  \item \textbf{Can $Y$-style recursion act like loops?}
-  Yes. Encode state as parameters. E.g., a while loop over $(n,acc)$ uses a recursive function that tests a condition and tail-calls with updated state.
-
-  \item \textbf{Why no definable \texttt{fix} in strongly normalizing typed $\lambda$?}
-  If \texttt{fix} were definable, we could define a non-terminating term $\,\Omega$, contradicting strong normalization. Hence total calculi exclude general \texttt{fix}.
-
-  \item \textbf{Making a non-confluent ARS confluent by adding rules—will termination break?}
-  Possibly. Adding join rules may introduce cycles. Confluence and termination are orthogonal; the \emph{Knuth–Bendix completion} process may fail or loop.
-
-  \item \textbf{Why do we need a fixed-point combinator? What limitation does it solve?}
-  Pure $\lambda$ without recursion lacks self-reference. Fixed points supply self-reference (\emph{solutions to equations} $x=F(x)$), enabling definitions of recursive functions.
-
-  \item \textbf{A ``better'' way to compute a fixed point than raw $Y$?}
-  In typed settings: \emph{typed} fix with guarded/structural recursion, or domain-theoretic least fixed points over CPOs; in practice: language-level recursion, loops, or higher-order iterators (map/fold).
-
-  \item \textbf{`fact` vs `factorial`.}
-  Abbreviation only; names are $\alpha$-variant placeholders.
-
-  \item \textbf{Does reduction order matter for termination when using \texttt{fix}?}
-  Yes. Confluence (Church–Rosser) says normal forms are unique when they exist, not that evaluation terminates. Some orders diverge while others terminate.
-
-  \item \textbf{What if \texttt{fix} is applied to a non-function?}
-  The unfolding step $\,\mathrm{fix}\ F \to F(\mathrm{fix}\ F)$ expects $F$ to be a function. Otherwise the program is stuck (or a runtime type error in typed languages).
+  \item \textbf{Typed vs untyped.} In typed, strongly normalizing calculi, general $Y$ breaks termination; practical languages use explicit recursion with typing restrictions, or domain-theoretic semantics for effects.
 \end{enumerate}
 
 \subsection{Homework 6}
@@ -538,13 +511,6 @@ which is exactly one recursive ``unfold''.
 In total/strongly normalizing typed calculi, $Y$ cannot be defined without sacrificing termination. Practical languages provide explicit recursion or \texttt{fix}, often with typing restrictions.
 \end{remark}
 
-\section{Conclusion}
-\textbf{Week 1:} Learned about invariants and why MU is impossible.  
-\textbf{Week 2:} Revisited ARS pictures and re-answered termination/confluence/UN with the UN-for-all convention.  
-\textbf{Week 3:} Explored rewriting with $\{a,b\}$, equivalence classes, and how termination can be fixed.\\
-\textbf{Week 4:} Used measure functions to prove termination of Euclid's algorithm and merge sort.\\
-\textbf{Week 5:} Connected $\lambda$-calculus ideas (self-application, confluence, Church numerals) to modern language design and evaluated the workout.\\
-\textbf{Week 6:} Explained evaluation contexts and fixpoints, computed \texttt{fact 3} step-by-step with labeled rules, and encoded factorial via the Y-combinator.
 % ============================
 \section{Week 7: Grammars, Parse Trees, and ASTs}
 % ============================
@@ -555,10 +521,8 @@ In total/strongly normalizing typed calculi, $Y$ cannot be defined without sacri
   \item \textbf{Fixed-point combinators and performance.} Using $Y$/\texttt{fix} introduces an extra unfolding step ($YF \to F(YF)$). Named recursion or \texttt{let rec} generally performs better since the compiler can optimize it directly without creating closures on each call.
   \item \textbf{LLMs as metaprograms.} Large language models can be viewed as metaprograms that translate semantics (intent or meaning) into code. However, they do not replace the traditional compiler pipeline—semantic interpretation, parsing, optimization, and execution still occur afterward.
   \item \textbf{Lisp and syntax readability.} Lisp’s simple S-expression syntax gives programmers direct access to abstract syntax, making metaprogramming and macro systems easier to implement. The trade-off is reduced human readability but increased ease of parsing for machines.
-  \item \textbf{Ambiguous grammars.} Ambiguity in grammars can make parsing inconsistent. Some languages resolve this through operator precedence and associativity rules. Others use ambiguity intentionally to allow flexible interpretation, though this is rare and risky in language design.
-  \item \textbf{Lambda calculus and grammars.} Lambda calculus defines the semantics of computation, while grammars define syntax. Parse trees represent structure that can later be reduced or evaluated according to lambda calculus rules.
-  \item \textbf{Parse trees vs.\ ASTs.} Parse trees (CSTs) include every symbol from the grammar, while ASTs simplify structure by removing redundant nodes like parentheses or punctuation. ASTs capture the program’s logical structure, making them easier for compilers to analyze.
-  \item \textbf{ASTs and compilation to assembly.} Parse trees and ASTs form the foundation for converting source code into lower-level representations. Compilers traverse ASTs to generate intermediate code (IR), perform optimizations, and finally emit assembly instructions or machine code.
+  \item \textbf{Ambiguous grammars.} Ambiguity in grammars can make parsing inconsistent; precedence and associativity rules often disambiguate.
+  \item \textbf{Parse trees vs.\ ASTs.} Parse trees include every token; ASTs compress away redundant structure (e.g., parentheses) to expose semantics for analysis and code generation.
 \end{itemize}
 
 \subsection{Homework 7: Context-Free Grammar and Derivation Trees}
@@ -688,6 +652,59 @@ Grammar:
 \end{tikzpicture}
 \end{center}
 
+% ============================
+\section{Week 8: Natural Number Game (Tutorial World)}
+% ============================
+
+\subsection{Notes \& Setup}
+This task connects informal English proofs with formal Lean steps. In the Tutorial World we use facts like
+\[
+a+0=a,\qquad a+\mathrm{succ}(b)=\mathrm{succ}(a+b),\qquad 1=\mathrm{succ}(0),
+\]
+and finish goals by reflexivity (\texttt{rfl}) after rewriting.
+
+\subsection{Selected Level Solutions (5--8)}
+Below are minimal tactic scripts matching the in-game steps. (They are illustrative—other equivalent scripts also pass.)
+
+\paragraph{Level 5 — Adding zero (right).}
+\begin{lstlisting}[language=Haskell]
+rw [add_zero b]
+rw [add_zero c]
+rfl
+\end{lstlisting}
+
+\paragraph{Level 6 — Careful rewriting.}
+\begin{lstlisting}[language=Haskell]
+rw [add_zero b]
+rw [add_zero c]
+rfl
+\end{lstlisting}
+
+\paragraph{Level 7 — Show  a + 1 = succ a.}
+\begin{lstlisting}[language=Haskell]
+rw [one_eq_succ_zero]
+rw [add_succ]
+rw [add_zero]
+rfl
+\end{lstlisting}
+
+\paragraph{Level 8 — Compute 2 + 2 = 4.}
+\begin{lstlisting}[language=Haskell]
+-- Use 2 = succ 1 and 1 = succ 0, then unfold addition by add_succ
+nth_rewrite 2 [two_eq_succ_one]
+rw [add_succ 2]
+nth_rewrite 1 [one_eq_succ_zero]
+-- continue rewrites until the goal closes by rfl
+\end{lstlisting}
+
+\subsection{Class Notes \& Discussion}
+\begin{itemize}
+  \item \textbf{English vs.\ Lean proofs.} The Lean script mirrors an English proof by repeatedly replacing equals by equals (rewrite) until both sides are syntactically identical (\texttt{rfl}).
+  \item \textbf{Core facts used.} Right identity of addition ($a+0=a$), right recursion ($a+\mathrm{succ}(b)=\mathrm{succ}(a+b)$), and numeral definitions ($1=\mathrm{succ}(0)$, $2=\mathrm{succ}(1)$).
+  \item \textbf{Tactics as rules of inference.} Each \texttt{rw} corresponds to applying an equality as a substitution rule; the order of rewrites matters to expose the shape needed for the next lemma.
+  \item \textbf{Why recursion on the right?} Defining $+$ by recursion on the second argument gives the simple law above and simplifies induction proofs on the right operand. Recursing on the left would require different lemmas (e.g., $\mathrm{succ}(a)+b=\mathrm{succ}(a+b)$) and different induction patterns.
+  \item \textbf{Equality reasoning pattern.} Normalize numerals $\to$ unfold by recursive law \texttt{add\_succ} repeatedly $\to$ discharge with identities like \texttt{add\_zero} $\to$ finish with \texttt{rfl}.
+\end{itemize}
 
 \begin{thebibliography}{99}
 \bibitem[BLA]{bla} Author, \href{https://en.wikipedia.org/wiki/LaTeX}{LaTeX Overview}, Publisher, Year.
