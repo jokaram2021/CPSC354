@@ -705,6 +705,116 @@ nth_rewrite 1 [one_eq_succ_zero]
   \item \textbf{Why recursion on the right?} Defining $+$ by recursion on the second argument gives the simple law above and simplifies induction proofs on the right operand. Recursing on the left would require different lemmas (e.g., $\mathrm{succ}(a)+b=\mathrm{succ}(a+b)$) and different induction patterns.
   \item \textbf{Equality reasoning pattern.} Normalize numerals $\to$ unfold by recursive law \texttt{add\_succ} repeatedly $\to$ discharge with identities like \texttt{add\_zero} $\to$ finish with \texttt{rfl}.
 \end{itemize}
+% ============================
+\section{Week 9: Addition World — Two Proofs \& Notes}
+% ============================
+
+\subsection{Notes \& Discussion (Q\&A)}
+
+\paragraph{Boundary between definitional and propositional equality.}
+\emph{Definitional} (or judgmental) equality is what the kernel reduces by computation/expansion and treats as the \emph{same term} (e.g.\ $\mathrm{Nat.add}\ a\ 0 \equiv a$, $\beta$-, $\delta$-, $\iota$-reductions). No proof object is needed; goals discharge by \texttt{rfl} or \texttt{simp} that performs computation.  
+\emph{Propositional} equality (\texttt{Eq}) is a type inhabited by a proof term (e.g.\ a chain of rewrites) showing two \emph{a priori} different terms are equal; it is manipulated with lemmas like \texttt{add\_assoc}, \texttt{congrArg}, \texttt{calc}, etc. Intuition: definitional = computation; propositional = reasoning about equality beyond raw computation.
+
+\paragraph{How $\mathbb{N}$’s inductive definition enables recursive $+$.}
+With \texttt{inductive Nat | zero | succ : Nat → Nat}, primitive recursion defines $a + n$ by
+\[
+a + 0 \;=\; a,\qquad a + \mathrm{succ}(n) \;=\; \mathrm{succ}(a+n).
+\]
+Because \texttt{Nat.rec} (or \texttt{Nat.recOn}) eliminates on the second argument, the recursion equations above are \emph{defining} equalities that Lean can compute with directly.
+
+\paragraph{SOLID in Lean / math-centric code.}
+\begin{itemize}
+  \item \textbf{S}ingle Responsibility: lemmas should prove exactly one fact; larger theorems compose small lemmas.
+  \item \textbf{O}pen/Closed: extend the library with new lemmas (open), don’t rewrite core definitions (closed).
+  \item \textbf{L}iskov Substitution: use typeclasses/instances (\texttt{Semiring}, \texttt{Monoid}) so theorems work for any instance.
+  \item \textbf{I}nterface Segregation: expose minimal lemma interfaces; avoid giant \texttt{simp} sets that do too much.
+  \item \textbf{D}ependency Inversion: reason at the level of algebraic interfaces rather than concrete \texttt{Nat} when possible.
+\end{itemize}
+Math-first programming prizes \emph{specification and proof}; SOLID maps well to clean lemma factoring and reusable abstractions.
+
+\paragraph{Do all computational equality proofs end with \texttt{rfl}?}
+No. Goals that are definitionally equal can close by \texttt{rfl}. Many “computational” goals can also finish via \texttt{simp} (using definitional rules like \texttt{Nat.add\_zero}, \texttt{Nat.add\_succ}). When non-computational rearrangements are needed (associativity/commutativity), we end with a lemma-driven chain or \texttt{simp}+\texttt{ring}-style tactics, not necessarily \texttt{rfl}.
+
+\paragraph{Double induction for \texttt{add\_right\_comm} without \texttt{add\_comm}/\texttt{add\_assoc}?}
+Yes in principle: prove $P(b,c): a+b+c=a+c+b$ for all $a$ by outer induction on $c$ and inner induction on $b$, using only the defining equations of $+$ and \texttt{succ} injectivity. It is longer and more technical in Lean because you must re-establish associativity-like rearrangements manually. Using standard lemmas is far shorter and idiomatic.
+
+\paragraph{How logic/maths proofs deepen Lean and industry skills.}
+They enforce precise specs, decomposition into lemmas (modularity), and automated checking (CI-like guarantees). This is directly transferable to testing, refactoring, and API design.
+
+\paragraph{Induction vs.\ algebraic lemmas (comm/assoc).}
+Being able to reach the same theorem both ways shows \emph{strategy choice}: induction exposes structure and well-founded decrease; lemma-based algebra leverages previously proved facts. In algorithm design this mirrors \emph{design space exploration}: choose recursion/iteration (structural approach) or algebraic transformations/identities (law-driven approach) depending on clarity and cost.
+
+\medskip
+
+\noindent\textit{Reference you cited (Tutorial World L8):} \url{https://adam.math.hhu.de/#/g/leanprover-community/nng4/world/Tutorial/level/8}
+
+% -------------------------------------------------
+\subsection{Homework 9: Addition World — Level 5 (two solutions)}
+% -------------------------------------------------
+
+\paragraph{Statement (as in Addition World, right-commuting the tail).}
+We show, for all $a,b,c\in\mathbb{N}$,
+\[
+a + b + c \;=\; a + c + b\qquad\text{(often called \texttt{add\_right\_comm}).}
+\]
+
+\subsubsection*{Solution 1 (non-inductive, via lemmas).}
+\begin{lstlisting}
+-- Lean 4
+theorem add_right_comm' (a b c : Nat) :
+  a + b + c = a + c + b := by
+  -- reshape: (a + b) + c  ≡  a + (b + c)
+  calc
+    a + b + c = a + (b + c) := by simp [Nat.add_assoc]
+    _          = a + (c + b) := by simpa [Nat.add_comm]
+    _          = a + c + b   := by simp [Nat.add_assoc]
+\end{lstlisting}
+
+\noindent\textbf{Pen-and-paper proof.}
+Using associativity and commutativity of $+$,
+\[
+(a+b)+c \;=\; a+(b+c) \;=\; a+(c+b) \;=\; (a+c)+b.
+\]
+Each step is a standard ring law; hence $a+b+c = a+c+b$.
+
+\subsubsection*{Solution 2 (inductive).}
+We prove $P(c):\ \forall a b.\ a+b+c=a+c+b$ by induction on $c$.
+
+\begin{lstlisting}
+-- Lean 4
+theorem add_right_comm_ind (a b c : Nat) :
+  a + b + c = a + c + b := by
+  induction c with
+  | zero =>
+      -- a + b + 0 = a + 0 + b
+      simp [Nat.add_assoc, Nat.add_zero, Nat.zero_add]
+  | succ c ih =>
+      -- goal: a + b + succ c = a + succ c + b
+      -- use the recursion equation for addition on the right argument
+      -- x + succ c = succ (x + c)
+      simp [Nat.add_assoc, ih]
+\end{lstlisting}
+
+\noindent\textbf{Pen-and-paper proof (matching the code).}
+Define $P(c)\!:\!\forall a,b,\ (a+b)+c=(a+c)+b$.  
+\emph{Base $c=0$:} $(a+b)+0=a+b=a+0+b$ by $x+0=x$ and $0+x=x$.  
+\emph{Step $c\mapsto c+1$:}
+\[
+\begin{aligned}
+(a+b)+(c+1) &= \mathrm{succ}\big((a+b)+c\big) &&\text{(def.\ of $+$)}\\
+            &= \mathrm{succ}\big((a+c)+b\big) &&\text{(IH)}\\
+            &= (a+(c+1))+b                      &&\text{(def.\ of $+$)}\\
+            &= a+(c+1)+b.
+\end{aligned}
+\]
+Thus $P(c)$ holds for all $c$, so $a+b+c=a+c+b$.
+
+\paragraph{Remark on lengths.}
+The non-inductive proof is a three-line \texttt{calc}. The double-inductive route (or the single induction above) is longer because it reconstructs rearrangements using only the defining equations and the inductive hypothesis.
+
+\subsubsection*{(Optional) What Level 5 asked and how this satisfies it.}
+The assignment asked for \emph{two distinct solutions}: one relying on computation/lemmas and another by induction, each with a corresponding “pen-and-paper” argument. The two proofs above meet those requirements.
+
 
 \begin{thebibliography}{99}
 \bibitem[BLA]{bla} Author, \href{https://en.wikipedia.org/wiki/LaTeX}{LaTeX Overview}, Publisher, Year.
