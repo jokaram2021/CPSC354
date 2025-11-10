@@ -79,6 +79,9 @@ Homework 5 evaluates a small $\lambda$-calculus ``workout'' using $\alpha$- and 
 Homework 6 develops fixpoints and recursion: we compute \texttt{fact 3} step-by-step with the rules for \texttt{fix}, \texttt{let}, and \texttt{let rec}, and give a Y-combinator encoding of factorial.
 Week 7 covers grammars, parse trees, and ASTs with full derivation trees.
 Week 8 connects the Natural Number Game (Tutorial World) to natural-language proofs and Lean tactics, with scripts for Levels 5--8 and a short class-notes discussion.
+Week 9 proves an Addition World lemma in two different styles (lemma-driven and inductive).
+\textbf{Week 10 adds one-line solutions for the Lean Logic Game (Implication World) Levels 6--9.}
+\textbf{Week 11 completes the Lean Logic \emph{Negation Tutorial} with one-line solutions for Levels 9--12, plus brief notes and a Discord question.}
 \end{abstract}
 
 \tableofcontents
@@ -705,6 +708,7 @@ nth_rewrite 1 [one_eq_succ_zero]
   \item \textbf{Why recursion on the right?} Defining $+$ by recursion on the second argument gives the simple law above and simplifies induction proofs on the right operand. Recursing on the left would require different lemmas (e.g., $\mathrm{succ}(a)+b=\mathrm{succ}(a+b)$) and different induction patterns.
   \item \textbf{Equality reasoning pattern.} Normalize numerals $\to$ unfold by recursive law \texttt{add\_succ} repeatedly $\to$ discharge with identities like \texttt{add\_zero} $\to$ finish with \texttt{rfl}.
 \end{itemize}
+
 % ============================
 \section{Week 9: Addition World — Two Proofs \& Notes}
 % ============================
@@ -815,6 +819,80 @@ The non-inductive proof is a three-line \texttt{calc}. The double-inductive rout
 \subsubsection*{(Optional) What Level 5 asked and how this satisfies it.}
 The assignment asked for \emph{two distinct solutions}: one relying on computation/lemmas and another by induction, each with a corresponding “pen-and-paper” argument. The two proofs above meet those requirements.
 
+% ============================
+\section{Week 10: Lean Logic Game — Implication World (Levels 6--9, one-liners)}
+% ============================
+
+\subsection{Notes}
+These problems are about chaining implications as plain functions. Each solution is written as \emph{one line of code} (a single $\lambda$-term) that composes the given hypotheses to produce the goal.
+
+\subsection{Solutions (single line each)}
+\paragraph{Level 6. Modus ponens.}
+\begin{lstlisting}
+-- (A → B) → A → B
+fun hAB a => hAB a
+\end{lstlisting}
+
+\paragraph{Level 7. Two-step syllogism (compose two implications).}
+\begin{lstlisting}
+-- (A → B) → (B → C) → A → C
+fun hAB hBC a => hBC (hAB a)
+\end{lstlisting}
+
+\paragraph{Level 8. Three-step chain.}
+\begin{lstlisting}
+-- (A → B) → (B → C) → (C → D) → A → D
+fun hAB hBC hCD a => hCD (hBC (hAB a))
+\end{lstlisting}
+
+\paragraph{Level 9. Four-step chain.}
+\begin{lstlisting}
+-- (A → B) → (B → C) → (C → D) → (D → E) → A → E
+fun hAB hBC hCD hDE a => hDE (hCD (hBC (hAB a)))
+\end{lstlisting}
+
+% ============================
+\section{Week 11: Lean Logic \textit{Negation Tutorial} (Levels 9--12)}
+% ============================
+
+\subsection{Class Notes \& Discussion (Negation)}
+\begin{itemize}
+  \item \textbf{Meaning of $\neg A$.} In Lean, $\neg A$ is notation for $A \to \mathrm{False}$.
+  \item \textbf{Ex falso.} From $\mathrm{False}$ you can derive any proposition $B$ via \texttt{False.elim}.
+  \item \textbf{Double negation (intro).} $A \to \neg\neg A$ is constructively provable; the converse $\neg\neg A \to A$ is not, unless classical logic is assumed.
+  \item \textbf{Contrapositive (forward).} $(A\to B)\to(\neg B\to \neg A)$ holds constructively by function composition.
+\end{itemize}
+
+\subsection{Requested One-line Solutions (Levels 9--12)}
+Each solution is a single line (one $\lambda$-term).
+
+\paragraph{Level 9 — From a contradiction, derive anything (variant).}
+\begin{lstlisting}
+-- (¬A) → A → B
+fun hNA a => False.elim (hNA a)
+\end{lstlisting}
+
+\paragraph{Level 10 — Double-negation introduction.}
+\begin{lstlisting}
+-- A → ¬¬A
+fun a hNA => hNA a
+\end{lstlisting}
+
+\paragraph{Level 11 — Contrapositive (forward direction).}
+\begin{lstlisting}
+-- (A → B) → (¬B → ¬A)
+fun hAB hNB a => hNB (hAB a)
+\end{lstlisting}
+
+\paragraph{Level 12 — Explosion from False (curried form).}
+\begin{lstlisting}
+-- False → (A → B)
+fun hFalse _ => False.elim hFalse
+\end{lstlisting}
+
+\subsection{Discord Question (as requested)}
+\textit{Question to post:}  
+Why does the Negation Tutorial allow a proof of $A \to \neg\neg A$ in one line, but \emph{not} $\neg\neg A \to A$ without importing classical logic? Can you point to a minimal example in the game where this difference shows up?
 
 \begin{thebibliography}{99}
 \bibitem[BLA]{bla} Author, \href{https://en.wikipedia.org/wiki/LaTeX}{LaTeX Overview}, Publisher, Year.
