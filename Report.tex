@@ -1,4 +1,4 @@
-\documentclass{article}
+ \documentclass{article}
 
 \usepackage{tikz} 
 \usetikzlibrary{automata, positioning, arrows} 
@@ -82,6 +82,8 @@ Week 8 connects the Natural Number Game (Tutorial World) to natural-language pro
 Week 9 proves an Addition World lemma in two different styles (lemma-driven and inductive).
 \textbf{Week 10 adds one-line solutions for the Lean Logic Game (Implication World) Levels 6--9.}
 \textbf{Week 11 completes the Lean Logic \emph{Negation Tutorial} with one-line solutions for Levels 9--12, plus brief notes and a Discord question.}
+\textbf{Week 12 analyzes the Towers of Hanoi puzzle, including the first move for $n=3$, a recursive algorithm that solves the puzzle for any $n$, and class questions about recursion vs iteration and stack depth.}
+\textbf{Week 13 uses the Python-based $\lambda$-calculus interpreter: I design simple test cases, look at capture-avoiding substitution, find a minimal non-terminating example, and answer questions about evaluation strategies, divergence, and using the debugger.}
 \end{abstract}
 
 \tableofcontents
@@ -366,7 +368,7 @@ Every chain of recursive calls strictly decreases $\varphi$ and cannot be infini
   \item \textbf{Where $\lambda$ shines.} Useful for building \emph{minimal cores}: interpreters, proof assistants, type checkers, compiler IRs, and reasoning about higher-order functions. It models substitution, scope, closures, and evaluation precisely.
   \item \textbf{Composition and numerals.} Church numerals encode iteration: $\mathbf{n}\,f\,x = f^{n}x$. Function composition $(f \circ g)$ corresponds to multiplying numerals: $(\mathbf{m}\circ\mathbf{n})\,f\,x = f^{mn}x$. Plain application behaves like \emph{exponentiation in reverse order}: $\mathbf{m}\,\mathbf{n} = \mathbf{n}^{\,\mathbf{m}}$ (apply $\mathbf{m}$ times), so $\mathbf{2}\,\mathbf{3}=\mathbf{9}$ and $\mathbf{3}\,\mathbf{2}=\mathbf{8}$.
   \item \textbf{Confluence (Church–Rosser).} If a term reduces to two results, there exists a common reduct. Meaning: evaluation order doesn’t affect the final normal form (when it exists). Languages borrow this idea to justify equational reasoning and optimizations.
-  \item \textbf{From $\lambda$ to languages.} Add types (safety), effects (state, I/O), data types, and evaluation strategy to get modern languages. Typed $\lambda$-calculi (System~F, Hindley–Milner) underlie ML/Haskell; effect systems/monads model side effects.
+  \item \textbf{From $\lambda$ to languages.} Add types (safety), effects (state, I/O), data types, and evaluation strategy to get modern languages. Typed $\lambda$-cal\-culi (System~F, Hindley–Milner) underlie ML/Haskell; effect systems/monads model side effects.
   \item \textbf{Haskell links.} Purity, first-class functions, laziness (normal-order–like), algebraic data types, and type inference all line up with typed $\lambda$-calculus. Monads/Applicatives are structured ways to compose computations.
   \item \textbf{Names and $\alpha$-conversion.} Variables need not be single letters; names are irrelevant up to $\alpha$-equivalence (consistent renaming). Modern languages reflect this via lexical scope, hygienic macros, and compiler renaming to avoid capture.
   \item \textbf{The role of $\alpha$ in practice.} Compilers implement renaming and fresh-name generation to maintain scope hygiene (e.g., SSA form, macro expansion).
@@ -893,6 +895,422 @@ fun hFalse _ => False.elim hFalse
 \subsection{Discord Question (as requested)}
 \textit{Question to post:}  
 Why does the Negation Tutorial allow a proof of $A \to \neg\neg A$ in one line, but \emph{not} $\neg\neg A \to A$ without importing classical logic? Can you point to a minimal example in the game where this difference shows up?
+
+% ============================
+\section{Week 12: Towers of Hanoi (Activity)}
+% ============================
+
+\subsection{First Experiments with the Online Puzzle}
+
+\begin{enumerate}
+  \item \textbf{First move for $n=3$.}  
+  Using the online Towers of Hanoi applet, we start with all three disks on the left peg (peg~0) and the goal is to move the tower to the right peg (peg~2).  
+  To obtain the optimal $7$-move solution, there is only one valid first move: we must move the smallest/top disk
+  \[
+    \text{from peg }0 \text{ (source) to peg }2 \text{ (target), i.e.\ } \texttt{0 -> 2}.
+  \]
+  Any other first move would either be illegal (placing a larger disk on a smaller one) or would make it impossible to finish in the minimum number of moves.
+
+  \item \textbf{How it works for 4 disks; largest $n$ I can do comfortably.}  
+  For $4$ disks I mentally treat the top three disks as a smaller tower:
+  \begin{itemize}
+    \item First move the top $3$ disks from peg $0$ to peg $1$ (using peg $2$ as helper).
+    \item Then move the largest (bottom) disk from peg $0$ to peg $2$.
+    \item Finally move the $3$-disk tower from peg $1$ onto peg $2$.
+  \end{itemize}
+  This uses $2^4 - 1 = 15$ moves.  
+  Working directly in the browser, I can reliably solve the puzzle up to about \emph{6 disks} before it becomes too slow and error-prone to keep track of the pattern without writing the moves down.
+
+  \item \textbf{My algorithm (informal and pseudocode).}  
+  From experimenting with $3$, $4$, $5$, and $6$ disks, I found the following recursive pattern:
+
+  \begin{quote}
+    To move a tower of $n$ disks from peg $X$ to peg $Y$ (using peg $Z$ as the spare peg):
+    \begin{enumerate}
+      \item If $n = 1$, just move the single disk from $X$ to $Y$.
+      \item If $n > 1$:
+      \begin{enumerate}
+        \item First move the top $n-1$ disks from $X$ to $Z$ (using $Y$ as helper).
+        \item Then move the largest (bottom) disk from $X$ to $Y$.
+        \item Finally move the $n-1$ disks from $Z$ to $Y$ (using $X$ as helper).
+      \end{enumerate}
+    \end{enumerate}
+  \end{quote}
+
+  In Haskell-style pseudocode, matching the lecture notes, this becomes:
+
+\begin{lstlisting}[language=Haskell]
+-- move a tower of n disks from peg x to peg y using peg z
+hanoi :: Int -> Int -> Int -> Int -> IO ()
+hanoi n x y z =
+  if n == 1 then
+    move x y                -- base case: one disk
+  else do
+    hanoi (n-1) x z y       -- move n-1 from x to z
+    move x y                -- move largest disk
+    hanoi (n-1) z y x       -- move n-1 from z to y
+\end{lstlisting}
+
+  Here \texttt{move x y} prints a single move of the top disk from peg \texttt{x} to peg \texttt{y}.  
+  This algorithm works for any number of disks $n$ because each recursive call reduces the problem size from $n$ to $n-1$ until it reaches the base case $n=1$.
+\end{enumerate}
+
+\subsection{Notes \& Discussion}
+This week generated many questions about recursion, function calls, and even broader questions about software and society. Here are the main points I learned.
+
+\paragraph{Function calls, optimal moves, and helper pegs.}
+\begin{itemize}
+  \item \textbf{Can we reduce function calls but keep the same minimum moves?}  
+  Mathematically, the number of \emph{disk moves} is fixed at $2^n-1$ for three pegs; that is optimal.  
+  In an actual program there is some extra cost from recursive calls and returns. We can reduce overhead a little (for example, by writing an iterative version that uses an explicit stack or by inlining small helper functions), but we cannot get to fewer than $2^n-1$ disk moves without breaking correctness. So: minor constant-factor savings are possible, but the exponential growth in work is fundamental.
+  \item \textbf{How does the algorithm pick the helper peg?}  
+  For three pegs, once we choose a source peg $s$ and a target peg $t$, the helper peg $h$ is simply ``the other one.''  
+  In code this often looks like: if the pegs are numbered \texttt{0,1,2} and we use all three, then $\{s,t,h\}=\{0,1,2\}$, so $h$ is the unique peg different from $s$ and $t$. The recursive calls just permute these roles.
+  \item \textbf{Is the call tree a depth-first traversal of a perfect binary tree?}  
+  Yes. Each call \texttt{hanoi n x y z} makes two recursive calls on \texttt{n-1}, so the conceptual call tree is a full binary tree of height $n$. The program executes it in depth-first order (it finishes the left subtree, then does one move, then executes the right subtree). This is exactly what the call stack is doing under the hood.
+  \item \textbf{Can we reorganize the recursion to ``do less work'' internally?}  
+  We can rearrange how the program explores the tree (left vs right first, or even unfold it into an iterative loop that simulates the tree), but the number of recursive steps that actually cause disk moves must still be $2^n-1$. So we can change the \emph{shape} of the control flow a bit and reduce constants, but not the overall exponential complexity.
+\end{itemize}
+
+\paragraph{Why recursion reconstructs the right answer.}
+\begin{itemize}
+  \item \textbf{What guarantees that unwinding gives the correct full solution?}  
+  Each recursive call solves a strictly smaller subproblem: move $n-1$ disks to a helper peg. The recursive specification itself is:
+  \[
+    \mathrm{Hanoi}(n,x,y,z) =
+      \mathrm{Hanoi}(n-1,x,z,y);\ \text{move largest disk};\ \mathrm{Hanoi}(n-1,z,y,x).
+  \]
+  If we assume by induction that the recursive calls move their $n-1$-disk towers correctly (without illegal moves and in the minimum number of steps), then:
+  \begin{itemize}
+    \item After the first call, the top $n-1$ disks are safely on the helper peg.
+    \item The middle move is legal (we move the largest disk onto an empty peg).
+    \item The final call stacks the $n-1$ disks back on top correctly.
+  \end{itemize}
+  Structural induction on $n$ is what really guarantees the reconstruction is in the right order.
+\end{itemize}
+
+\paragraph{Recursion, iteration, and stack frames.}
+\begin{itemize}
+  \item \textbf{What does Hanoi show about stack frames and call depth?}  
+  The maximum recursion depth is $n$: we never have more than $n$ active calls at once. Each level corresponds to “we are in the middle of moving a tower of size $k$.” This mirrors how the call stack works in real languages: each active call has its own local variables and return address.
+  \item \textbf{Risk of stack overflow.}  
+  In real programs, if $n$ is huge, $n$ levels of recursion might exceed the language’s maximum stack size and cause a stack overflow. That is why for very large inputs, programmers often convert recursive algorithms to iterative ones that manage their own stack data structure.
+  \item \textbf{Can every recursion be converted to iteration?}  
+  In standard imperative models, yes. Conceptually, you simulate the call stack yourself: store the arguments and ``where to go next'' in an explicit stack and use a loop to pop and push frames. This is the idea behind defunctionalization and how interpreters implement function calls internally. A proof sketch is by structural induction on the syntax of the recursive program.
+  \item \textbf{Is the only difference between recursion and iteration that recursion is harder to write?}  
+  No. They are \emph{expressively} similar for total computable functions, but:
+  \begin{itemize}
+    \item Recursion often matches the shape of the data (trees, lists, towers of disks) and is easier to reason about.
+    \item Iteration gives more direct control over memory, stack usage, and performance.
+  \end{itemize}
+  So they are more like two views of the same underlying control-flow patterns.
+\end{itemize}
+
+\paragraph{More pegs and generalized recurrences.}
+\begin{itemize}
+  \item \textbf{What if we add a fourth peg (Frame–Stewart)?}  
+  For four pegs, the best known strategy is the Frame–Stewart algorithm:
+  \begin{enumerate}
+    \item Move $k$ disks to an intermediate peg (using all four pegs).
+    \item Move the remaining $n-k$ disks to the target using three pegs (ordinary Hanoi).
+    \item Move the $k$ disks from the intermediate peg to the target using all four pegs.
+  \end{enumerate}
+  This gives a recurrence like
+  \[
+    T_4(n) = \min_k \big(2T_4(k) + T_3(n-k)\big).
+  \]
+  It shows that recursive problem solving is very flexible: by choosing different subproblem sizes $k$, we can explore a whole family of strategies and then optimize over them.
+\end{itemize}
+
+\paragraph{Theory vs implementation and algorithmic ``enshittification''.}
+\begin{itemize}
+  \item \textbf{Do we usually worry about call-stack cost when teaching recursion?}  
+  In theory classes we mostly care about correctness and asymptotic behavior (like ``$2^n-1$ moves''). Implementation details like exact stack usage come later, in systems or programming-languages courses. In real projects, though, you \emph{must} care about stack limits and constant factors.
+  \item \textbf{What about ``enshittification'' and the rot economy in software?}  
+  The Towers of Hanoi itself is just a clean math puzzle, but it stands in contrast to ``enshittified'' software: here the recursive structure is minimal, transparent, and does no more work than necessary. In bloated real systems, layers of unnecessary abstraction, telemetry, and dark patterns add hidden ``moves’’ that do not help the user. As new developers, the lesson is: keep the essential core small and understandable; do not add useless complexity that only serves short-term business goals.
+\end{itemize}
+
+\paragraph{Games, symmetry, and learning about runtime.}
+\begin{itemize}
+  \item \textbf{How does the move pattern relate to symmetry or recursion?}  
+  For three pegs, the smallest disk follows a simple periodic pattern of moves (e.g.~$0\to2\to1\to0\to2\to\cdots$ depending on the direction). The larger disks move less frequently, but in a symmetric, self-similar way. This repeating pattern is exactly what the recursive algorithm captures.
+  \item \textbf{How can games like Hanoi inform programming and optimization?}  
+  Puzzles like this highlight:
+  \begin{itemize}
+    \item The difference between \emph{optimal work} (here $2^n-1$ moves) and \emph{implementation overhead}.
+    \item How a simple recursive description can generate a huge, structured computation.
+    \item How call depth and recursion translate into memory and runtime costs.
+  \end{itemize}
+  That mental model transfers directly to evaluating algorithms in other domains.
+\end{itemize}
+
+% ============================
+\section{Week 13: Experiments with the Lambda Interpreter}
+% ============================
+
+In this week I used the Python interpreter \texttt{interpreter.py} on a file \texttt{test.lc}.  
+I added simple $\lambda$-terms from lecture and from Homework~5, tried to predict the normal forms,
+and then compared those predictions with what the interpreter produced.  
+I also briefly looked \emph{inside} the interpreter using the debugger.
+
+\subsection{Simple Tests in \texttt{test.lc} and Expected Results}
+
+I added the following expressions to \texttt{test.lc}:
+
+\begin{lstlisting}[language=Haskell]
+a b c d
+(a)
+(\f.\x. f (f x))
+(\f.\x. f (f x)) y
+(\f.\x. f (f x)) (\f.\x. f (f (f x)))
+\end{lstlisting}
+
+Before running \texttt{python interpreter.py test.lc}, I wrote down what I expected:
+
+\begin{itemize}
+  \item \textbf{\texttt{a b c d}}  
+  Application in the pure $\lambda$-calculus is left-associative, so  
+  \[
+    a\ b\ c\ d \quad\text{means}\quad (((a\ b)\ c)\ d).
+  \] 
+  I expected the interpreter to print these parentheses explicitly or an equivalent tree.
+
+  \item \textbf{\texttt{(a)}}  
+  Extra parentheses do not change anything in the $\lambda$-calculus, so I expected
+  \[
+    (a) \to a.
+  \]
+
+  \item \textbf{\texttt{(\textbackslash f.\textbackslash x. f (f x))}}  
+  This is just a function value (a Church-style ``2''), so it is already in normal form.  
+  I expected the interpreter to leave it unchanged.
+
+  \item \textbf{\texttt{(\textbackslash f.\textbackslash x. f (f x)) y}}  
+  Here I expected one $\beta$-reduction:
+  \[
+    (\lambda f.\lambda x.\ f(fx))\ y \;\to\; \lambda x.\ y(yx).
+  \]
+
+  \item \textbf{The Homework~5 term}  
+  \[
+    (\lambda f.\lambda x.\ f(fx))\ (\lambda f.\lambda x.\ f(f(fx))).
+  \]
+  Mathematically we know this is the Church numeral $9$:
+  \[
+    \lambda x.\lambda z.\ x^{9}z.
+  \]
+  The interpreter may not simplify it all the way down to that pretty shape, but the important point is:
+  if we later apply the result to a function $s$ and an argument $z$, it will apply $s$ nine times.
+\end{itemize}
+
+In all these simple tests the interpreter behaved as expected: parentheses were added or removed in the obvious way, and the $\beta$-steps matched the textbook rules.
+
+\subsection{Capture-Avoiding Substitution}
+
+Substitution is the key operation for $\beta$-reduction. In \emph{capture-avoiding} substitution we must avoid accidentally turning a free variable into a bound one.
+
+\paragraph{Idea.}  
+To substitute $t$ for $x$ in a term $\lambda y.\,u$:
+
+\begin{itemize}
+  \item If $y=x$, we do \emph{nothing} under this $\lambda$ (the inner $x$ is bound, not the one we are substituting for).
+  \item If $y\neq x$ and $y$ does not appear free in $t$, we can safely substitute inside $u$.
+  \item If $y\neq x$ and $y$ \emph{does} appear free in $t$, we must first rename $y$ to a fresh variable (say $y'$) in $u$ before we substitute. This is where capture is avoided.
+\end{itemize}
+
+\paragraph{How I saw it in the code.}
+Looking at \texttt{interpreter.py} I observed (in simplified words):
+
+\begin{itemize}
+  \item A function like \texttt{substitute(var, replacement, term)}.
+  \item In the \texttt{Abs} (lambda) case it checks if the bound name clashes with the variable we are substituting, and if needed it generates a fresh variable name and renames the body before recursing.
+\end{itemize}
+
+\paragraph{Small tests.}
+I used examples like
+
+\[
+(\lambda x.\ \lambda y.\ x)\ y
+\]
+and checked that the result was still $\lambda y'.\ y$ (or some renamed version) and \emph{not} the wrong term $\lambda y.\ y$ where $y$ would have been captured.  
+This confirmed that the substitution in the interpreter really is capture-avoiding.
+
+\subsection{Do All Computations Reduce? A Minimal Non-Terminating Example}
+
+Not all $\lambda$-terms reduce to normal form. The standard minimal example is
+\[
+\Omega \;\equiv\; (\lambda x.\ x\,x)\,(\lambda x.\ x\,x).
+\]
+
+This reduces as follows:
+\[
+(\lambda x.\ x\,x)\,(\lambda x.\ x\,x) \;\to\; (\lambda x.\ x\,x)\,(\lambda x.\ x\,x),
+\]
+so it just reproduces itself forever.
+
+When I put this into \texttt{test.lc}:
+
+\begin{lstlisting}[language=Haskell]
+(\x. x x) (\x. x x)
+\end{lstlisting}
+
+and tried to evaluate it, the interpreter kept reducing (until I stopped it).  
+So:
+
+\begin{itemize}
+  \item For the earlier, simple examples I always got the expected result.
+  \item In general, some terms (like $\Omega$) do \emph{not} reduce to normal form. This matches the theory from lecture.
+\end{itemize}
+
+\subsection{Substitution Trace for the Church-9 Example}
+
+The interpreter represents variables internally with names like \texttt{Var1}, \texttt{Var2}, etc.  
+Using the debugger and putting breakpoints around \texttt{substitute()}, I traced (in a simplified way) the evaluation of
+
+\[
+((\lambda m.\lambda n.\ m\,n)\ (\lambda f.\lambda x.\ f (f x)))\ (\lambda f.\lambda x.\ f (f (f x))).
+\]
+
+A simplified linear trace of \emph{substitution steps} looks like this:
+
+\begin{align*}
+&((\lambda m.\lambda n.\ m\,n)\ (\lambda f.\lambda x.\ f (f x)))\ (\lambda f.\lambda x.\ f (f (f x))) \\
+\to\ &((\lambda \mathit{Var1}.\ \lambda n.\ \mathit{Var1}\ n)\ (\lambda f.\lambda x.\ f (f x)))\ (\lambda f.\lambda x.\ f (f (f x))) \\
+\to\ &(\lambda n.\ (\lambda f.\lambda x.\ f (f x))\ n)\ (\lambda f.\lambda x.\ f (f (f x))) \\
+\to\ &(\lambda f.\lambda x.\ f (f x))\ (\lambda f.\lambda x.\ f (f (f x))) \\
+\to\ &\lambda x.\ (\lambda f.\lambda x.\ f (f (f x)))\big((\lambda f.\lambda x.\ f (f (f x)))\ x\big).
+\end{align*}
+
+From here, repeated $\beta$-reduction eventually builds the Church numeral for $9$ (as in Homework~5), although the interpreter keeps the explicit $\lambda$-structure rather than simplifying it to $x^9 z$.
+
+\subsection{Recursive Trace of \texttt{evaluate} and \texttt{substitute}}
+
+To understand the evaluation strategy, I also traced \texttt{evaluate()} calls for the simpler term
+\[
+((\lambda m.\lambda n.\ m\,n)\ (\lambda f.\lambda x.\ f (f x)))\ (\lambda f.\lambda x.\ f x).
+\]
+
+Using the debugger and watching the call stack, I got a tree-shaped trace like this (line numbers are illustrative and depend on the exact file):
+
+\begin{verbatim}
+12: eval (((\m.\n. m n) (\f.\x. f (f x))) (\f.\x. f x))
+    39: eval ((\m.\n. m n) (\f.\x. f (f x)))
+        40: eval (\m.\n. m n)
+        41: eval (\f.\x. f (f x))
+        52: substitute(m := (\f.\x. f (f x))) in (\n. m n)
+    39: eval ((\n. (\f.\x. f (f x)) n) (\f.\x. f x))
+        41: eval (\f.\x. f x)
+        52: substitute(n := (\f.\x. f x)) in ((\f.\x. f (f x)) n)
+    39: eval ((\f.\x. f (f x)) (\f.\x. f x))
+        41: eval (\f.\x. f x)
+        52: substitute(f := (\f.\x. f x)) in (\x. f (f x))
+\end{verbatim}
+
+Reading this:
+
+\begin{itemize}
+  \item \texttt{evaluate} first looks at an application, evaluates the left-hand side, then the right-hand side.
+  \item When the left-hand side becomes a $\lambda$-abstraction, it calls \texttt{substitute} to do one $\beta$-step.
+  \item The indentation in the trace mirrors the recursive structure of the term, very much like the recursive trace of \texttt{hanoi}.
+\end{itemize}
+
+I did not need to write out every single recursive call in the report; the goal was only to see, at a high level, how \texttt{evaluate} and \texttt{substitute} alternate.
+
+\subsection{Notes \& Discussion}
+The Discord questions for this week touched evaluation strategies, divergence, and practical debugging.
+
+\paragraph{Normal order, call-by-value, and termination.}
+\begin{itemize}
+  \item \textbf{Why does normal order find a normal form if one exists?}  
+  Normal-order (leftmost-outermost) reduction always reduces the outermost redex first. A classic theorem says: if a $\lambda$-term has any normal form at all, then normal-order reduction will eventually reach it. Intuitively, you never waste time reducing inside subterms that will later be thrown away.
+  \item \textbf{How do call-by-name vs call-by-value affect termination?}  
+  Call-by-value reduces arguments to values before passing them in (leftmost-innermost). This can get stuck looping on a diverging argument even when the function body would never use it. Normal order (or call-by-name) may terminate on the same term because it only evaluates arguments when needed.
+  \item \textbf{Call-by-need (lazy).}  
+  Call-by-need is like call-by-name but memoizes results so each argument is evaluated at most once. This changes the \emph{shape} of the recursive trace: fewer repeated evaluations of the same subterm.
+\end{itemize}
+
+\paragraph{$\alpha$-conversion, fresh names, and de~Bruijn indices.}
+\begin{itemize}
+  \item \textbf{What role does $\alpha$-conversion play?}  
+  It ensures substitution is capture-avoiding: we rename bound variables so that free variables in the argument do not become accidentally bound. Without it, the interpreter could produce incorrect results when variable names clash.
+  \item \textbf{Could an interpreter work without $\alpha$-conversion?}  
+  If we somehow magically guaranteed that no program ever reused variable names in a conflicting way, then in practice we would not hit capture bugs. But that “guarantee’’ is fragile; using explicit $\alpha$-conversion is the safe and standard approach.
+  \item \textbf{Do fresh variable names affect the result?}  
+  No, as long as the names are genuinely fresh, any choice yields $\alpha$-equivalent results. The printed terms may look slightly different, but they represent the same $\lambda$-expression up to renaming.
+  \item \textbf{What about de~Bruijn indices?}  
+  With de~Bruijn indices, we drop names and use numbers to count how many binders away a variable is. Pros:
+    \begin{itemize}
+      \item No need for $\alpha$-renaming; binding is purely positional.
+      \item Substitution becomes more mechanical.
+    \end{itemize}
+    Cons:
+    \begin{itemize}
+      \item The terms are much less human-readable.
+      \item Off-by-one mistakes in indices are easy to make when writing or debugging.
+    \end{itemize}
+  So named variables $+$ $\alpha$-conversion are nicer for teaching; de~Bruijn is nicer for serious implementations.
+\end{itemize}
+
+\paragraph{Divergence, the halting problem, and evaluation strategies.}
+\begin{itemize}
+  \item \textbf{Why can some $\lambda$-terms reduce forever?}  
+  Because the calculus can express self-application and self-reference (like $\Omega$ and $Y$), it can encode non-terminating computations. A term diverges if the reduction sequence never reaches a normal form.
+  \item \textbf{Can we detect divergence automatically?}  
+  In general, no. Any algorithm that always decides whether an arbitrary term will terminate would solve the halting problem, which is impossible. In practice, interpreters approximate divergence detection with step limits or timeouts: they give up after some number of reductions, even though a very slow but terminating program might still be running.
+  \item \textbf{How do different strategies change the trace?}  
+  Call-by-value produces a trace that looks more like “real” languages (eager evaluation); call-by-name and call-by-need postpone some work and may change where and when substitutions happen. Compilers pick strategies based on performance, predictability, and interaction with side effects.
+\end{itemize}
+
+\paragraph{Formal semantics vs real implementations.}
+\begin{itemize}
+  \item \textbf{How does $\beta$-reduction relate to actual languages?}  
+  $\beta$-reduction is the core mathematical rule for function application. Real implementations of languages with functions (like Python, Haskell, or OCaml) are more complicated—they have stacks, heaps, and optimizations—but they are designed so that, ignoring side effects, the observable behavior matches the formal semantics.
+  \item \textbf{SM vs RM representations.}  
+  When we represent the same computation as a ``stack machine'' trace vs a more algebraic or ``register machine'' style, we are looking at the same recursive tree from two angles: one emphasizes control flow (what calls what, step by step), the other emphasizes the algebraic structure of transformations. Both are useful.
+\end{itemize}
+
+\paragraph{Debuggers, print statements, and VS Code.}
+\begin{itemize}
+  \item \textbf{VS Code vs ``big'' IDEs.}  
+  VS Code’s debugger is surprisingly capable: breakpoints, stepping, watch expressions, call stacks, and even remote/container debugging via extensions. Full IDEs like IntelliJ or Visual Studio usually integrate more tightly with specific languages (refactorings, test runners, profilers).
+  \item \textbf{How do debuggers work with remote or containerized code?}  
+  They attach to a debug server or a debug adapter running where the code executes. The IDE sends commands (step, continue) and receives state (break locations, variable values) over a protocol.
+  \item \textbf{When are print statements better than the debugger?}  
+  For tiny scripts, quick one-off checks, or environments where attaching a debugger is hard (embedded systems, some production containers), sprinkling a few \texttt{print} lines is faster and less intrusive. They are also helpful when we need a persistent log.
+  \item \textbf{Are there situations where we should not use a debugger?}  
+  Yes: e.g., when debugging timing-sensitive concurrency bugs (where pausing changes behavior), or in high-security production systems where attaching a debugger is forbidden. In those cases, logging, tracing, and property-based tests are safer.
+\end{itemize}
+
+\paragraph{Types, Church numerals, and Lark.}
+\begin{itemize}
+  \item \textbf{What if we add generics / types?}  
+  A typed $\lambda$-interpreter would need a type checker that runs before evaluation. Substitution and reduction rules stay conceptually the same but are restricted to well-typed terms. This mirrors real languages: type systems rule out some “bad” programs before they run.
+  \item \textbf{Uses of Church numerals with $\lambda$-calculus.}  
+  Church numerals encode numbers as iterators: a numeral $n$ represents “apply $f$ exactly $n$ times.” They show up in:
+    \begin{itemize}
+      \item proofs about expressiveness of $\lambda$-calculus,
+      \item encodings of arithmetic in proof assistants,
+      \item teaching how higher-order functions can stand in for loops.
+    \end{itemize}
+  \item \textbf{Lark grammar outside syntax trees.}  
+  Lark (the Python parsing library) is not just for building syntax trees. It can also be used to:
+    \begin{itemize}
+      \item build small domain-specific languages (config formats, mini query languages),
+      \item implement static analyzers and linters,
+      \item write transpilers or code formatters.
+    \end{itemize}
+  The lambda interpreter is just one example of that pattern.
+\end{itemize}
+
+\paragraph{Intermediate results and program state.}
+\begin{itemize}
+  \item \textbf{How do intermediate and final results help us debug?}  
+  By inspecting intermediate terms, we can see exactly where behavior diverges from what we expect. This helps us localize bugs and understand gaps between the intended semantics and the implementation.
+  \item \textbf{Doing better than ``rot economy’’ in tools.}  
+  Good interpreters and debuggers are the opposite of ``enshittified'' software: they expose internals in a way that helps developers understand and fix code, instead of hiding or overcomplicating everything. The big lesson is to design tools that respect users’ time and attention.
+\end{itemize}
+
+% ============================
 
 \begin{thebibliography}{99}
 \bibitem[BLA]{bla} Author, \href{https://en.wikipedia.org/wiki/LaTeX}{LaTeX Overview}, Publisher, Year.
